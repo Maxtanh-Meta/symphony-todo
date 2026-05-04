@@ -11,6 +11,8 @@ npm test         # Run tests
 
 Open http://localhost:3000 in your browser.
 
+Todos are persisted to `data/todos.json` by default.
+
 ## API
 
 | Method | Endpoint | Description |
