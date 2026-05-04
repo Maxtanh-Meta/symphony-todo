@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo App</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; display: flex; justify-content: center; padding: 40px 20px; }
+    .container { max-width: 500px; width: 100%; }
+    h1 { font-size: 2rem; margin-bottom: 24px; color: #1a1a1a; }
+    .input-row { display: flex; gap: 8px; margin-bottom: 24px; }
+    input[type="text"] { flex: 1; padding: 12px 16px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; outline: none; transition: border-color 0.2s; }
+    input[type="text"]:focus { border-color: #4f46e5; }
+    button { padding: 12px 20px; background: #4f46e5; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
+    button:hover { background: #4338ca; }
+    .todo-list { list-style: none; }
+    .todo-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: white; border-radius: 8px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .todo-item.completed span { text-decoration: line-through; color: #999; }
+    .todo-item span { flex: 1; font-size: 1rem; }
+    .todo-item .check { width: 22px; height: 22px; border: 2px solid #d0d0d0; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .todo-item .check:hover { border-color: #4f46e5; }
+    .todo-item.completed .check { background: #4f46e5; border-color: #4f46e5; }
+    .todo-item.completed .check::after { content: '✓'; color: white; font-size: 14px; }
+    .todo-item .delete { background: none; border: none; color: #ccc; font-size: 1.2rem; cursor: pointer; padding: 4px 8px; }
+    .todo-item .delete:hover { color: #ef4444; }
+    .empty { text-align: center; color: #999; padding: 40px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📝 Todos</h1>
+    <div class="input-row">
+      <input type="text" id="input" placeholder="What needs to be done?" autofocus>
+      <button onclick="addTodo()">Add</button>
+    </div>
+    <ul class="todo-list" id="list"></ul>
+  </div>
+  <script>
+    const input = document.getElementById('input');
+    const list = document.getElementById('list');
+
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') addTodo(); });
+
+    async function addTodo() {
+      const title = input.value.trim();
+      if (!title) return;
+      await fetch('/api/todos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title }) });
+      input.value = '';
+      loadTodos();
+    }
+
+    async function completeTodo(id) {
+      await fetch(`/api/todos/${id}`, { method: 'PATCH' });
+      loadTodos();
+    }
+
+    async function removeTodo(id) {
+      await fetch(`/api/todos/${id}`, { method: 'DELETE' });
+      loadTodos();
+    }
+
+    async function loadTodos() {
+      const todos = await fetch('/api/todos').then(r => r.json());
+      if (!todos.length) { list.innerHTML = '<div class="empty">No todos yet — add one above!</div>'; return; }
+      list.innerHTML = todos.map(t => `
+        <li class="todo-item ${t.completed ? 'completed' : ''}">
+          <div class="check" onclick="completeTodo(${t.id})"></div>
+          <span>${t.title}</span>
+          <button class="delete" onclick="removeTodo(${t.id})">×</button>
+        </li>
+      `).join('');
+    }
+
+    loadTodos();
+  </script>
+</body>
+</html>
