@@ -24,6 +24,7 @@ class TodoApp {
     this.todos = savedTodos.map(todo => ({
       id: Number(todo.id),
       title: todo.title,
+      dueDate: TodoApp.normalizeDueDate(todo.dueDate),
       completed: Boolean(todo.completed),
       createdAt: todo.createdAt ? new Date(todo.createdAt) : new Date(),
     }));
@@ -42,8 +43,32 @@ class TodoApp {
     );
   }
 
-  add(title) {
-    const todo = { id: this.nextId++, title, completed: false, createdAt: new Date() };
+  static normalizeDueDate(dueDate) {
+    if (dueDate === undefined || dueDate === null || dueDate === '') {
+      return null;
+    }
+
+    if (typeof dueDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
+      throw new Error('dueDate must be YYYY-MM-DD');
+    }
+
+    const parsed = new Date(`${dueDate}T00:00:00.000Z`);
+    if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== dueDate) {
+      throw new Error('dueDate must be a valid date');
+    }
+
+    return dueDate;
+  }
+
+  add(title, dueDate = null) {
+    const normalizedDueDate = TodoApp.normalizeDueDate(dueDate);
+    const todo = {
+      id: this.nextId++,
+      title,
+      dueDate: normalizedDueDate,
+      completed: false,
+      createdAt: new Date(),
+    };
     this.todos.push(todo);
     this.save();
     return todo;

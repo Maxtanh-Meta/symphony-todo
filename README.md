@@ -18,7 +18,7 @@ Todos are persisted to `data/todos.json` by default.
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | /api/todos | List all todos |
-| POST | /api/todos | Add a todo (`{ "title": "..." }`) |
+| POST | /api/todos | Add a todo (`{ "title": "...", "dueDate": "YYYY-MM-DD" }`) |
 | PATCH | /api/todos/:id | Mark todo as complete |
 | DELETE | /api/todos/:id | Remove a todo |
 
