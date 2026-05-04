@@ -1,0 +1,11 @@
+{
+  "name": "symphony-todo",
+  "version": "1.0.0",
+  "description": "A simple todo app for testing Symphony orchestration",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node test/todo.test.js"
+  },
+  "license": "MIT"
+}
