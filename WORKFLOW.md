@@ -28,9 +28,9 @@ agent:
 codex:
   command: codex --dangerously-disable-linux-sandbox --dangerously-enable-internet-mode --config shell_environment_policy.inherit=all --config 'model="gpt-5.5"' --config model_reasoning_effort=xhigh app-server
   approval_policy: never
-  thread_sandbox: full-auto
+  thread_sandbox: danger-full-access
   turn_sandbox_policy:
-    type: fullAuto
+    type: dangerFullAccess
     network_access: true
 ---
 
