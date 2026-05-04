@@ -28,9 +28,10 @@ agent:
 codex:
   command: codex --dangerously-disable-linux-sandbox --dangerously-enable-internet-mode --config shell_environment_policy.inherit=all --config 'model="gpt-5.5"' --config model_reasoning_effort=xhigh app-server
   approval_policy: never
-  thread_sandbox: workspace-write
+  thread_sandbox: full-auto
   turn_sandbox_policy:
-    type: workspaceWrite
+    type: fullAuto
+    network_access: true
 ---
 
 You are working on a Linear ticket `{{ issue.identifier }}`
