@@ -6,35 +6,94 @@
   <title>Todo App</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; display: flex; justify-content: center; padding: 40px 20px; }
+    :root {
+      color-scheme: light;
+      --bg: #f5f5f5;
+      --surface: #ffffff;
+      --text: #1a1a1a;
+      --muted: #6b7280;
+      --subtle: #999999;
+      --border: #e0e0e0;
+      --shadow: rgba(0,0,0,0.08);
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --danger: #ef4444;
+      --control-bg: #ffffff;
+      --toggle-track: #d1d5db;
+      --toggle-knob: #ffffff;
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #111827;
+      --surface: #1f2937;
+      --text: #f9fafb;
+      --muted: #cbd5e1;
+      --subtle: #94a3b8;
+      --border: #374151;
+      --shadow: rgba(0,0,0,0.35);
+      --primary: #818cf8;
+      --primary-hover: #6366f1;
+      --danger: #f87171;
+      --control-bg: #111827;
+      --toggle-track: #4b5563;
+      --toggle-knob: #f9fafb;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; min-height: 100vh; padding: 40px 20px; transition: background 0.2s, color 0.2s; }
     .container { max-width: 500px; width: 100%; }
-    h1 { font-size: 2rem; margin-bottom: 24px; color: #1a1a1a; }
+    .header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+    h1 { font-size: 2rem; color: var(--text); }
+    .theme-toggle { display: inline-flex; align-items: center; gap: 10px; color: var(--muted); font-size: 0.9rem; cursor: pointer; user-select: none; }
+    .theme-toggle input { position: absolute; opacity: 0; pointer-events: none; }
+    .theme-switch { width: 46px; height: 26px; padding: 3px; border-radius: 999px; background: var(--toggle-track); transition: background 0.2s; }
+    .theme-switch::after { content: ''; display: block; width: 20px; height: 20px; border-radius: 50%; background: var(--toggle-knob); box-shadow: 0 1px 3px rgba(0,0,0,0.25); transition: transform 0.2s; }
+    .theme-toggle input:checked + .theme-switch { background: var(--primary); }
+    .theme-toggle input:checked + .theme-switch::after { transform: translateX(20px); }
+    .theme-toggle input:focus-visible + .theme-switch { outline: 2px solid var(--primary); outline-offset: 3px; }
     .input-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
-    input[type="text"], input[type="date"] { padding: 12px 16px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; outline: none; transition: border-color 0.2s; background: white; }
+    input[type="text"], input[type="date"] { padding: 12px 16px; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem; outline: none; transition: border-color 0.2s, background 0.2s, color 0.2s; background: var(--control-bg); color: var(--text); }
+    input::placeholder { color: var(--subtle); }
     input[type="text"] { flex: 1 1 220px; }
-    input[type="date"] { flex: 0 0 155px; color: #333; }
-    input[type="text"]:focus, input[type="date"]:focus { border-color: #4f46e5; }
-    button { padding: 12px 20px; background: #4f46e5; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
-    button:hover { background: #4338ca; }
+    input[type="date"] { flex: 0 0 155px; }
+    input[type="text"]:focus, input[type="date"]:focus { border-color: var(--primary); }
+    button { padding: 12px 20px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
+    button:hover { background: var(--primary-hover); }
     .todo-list { list-style: none; }
-    .todo-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: white; border-radius: 8px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .todo-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--surface); border-radius: 8px; margin-bottom: 8px; box-shadow: 0 1px 3px var(--shadow); transition: background 0.2s, box-shadow 0.2s; }
     .todo-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
     .todo-title { font-size: 1rem; overflow-wrap: anywhere; }
-    .todo-item.completed .todo-title { text-decoration: line-through; color: #999; }
-    .due-date { color: #6b7280; font-size: 0.85rem; }
-    .todo-item.completed .due-date { color: #aaa; }
-    .todo-item .check { width: 22px; height: 22px; border: 2px solid #d0d0d0; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-    .todo-item .check:hover { border-color: #4f46e5; }
-    .todo-item.completed .check { background: #4f46e5; border-color: #4f46e5; }
+    .todo-item.completed .todo-title { text-decoration: line-through; color: var(--subtle); }
+    .due-date { color: var(--muted); font-size: 0.85rem; }
+    .todo-item.completed .due-date { color: var(--subtle); }
+    .todo-item .check { width: 22px; height: 22px; border: 2px solid var(--border); border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex: 0 0 auto; }
+    .todo-item .check:hover { border-color: var(--primary); }
+    .todo-item.completed .check { background: var(--primary); border-color: var(--primary); }
     .todo-item.completed .check::after { content: '✓'; color: white; font-size: 14px; }
-    .todo-item .delete { background: none; border: none; color: #ccc; font-size: 1.2rem; cursor: pointer; padding: 4px 8px; }
-    .todo-item .delete:hover { color: #ef4444; }
-    .empty { text-align: center; color: #999; padding: 40px; }
+    .todo-item .delete { background: none; border: none; color: var(--subtle); font-size: 1.2rem; cursor: pointer; padding: 4px 8px; }
+    .todo-item .delete:hover { color: var(--danger); background: transparent; }
+    .empty { text-align: center; color: var(--subtle); padding: 40px; }
+    @media (max-width: 420px) {
+      .header { align-items: flex-start; flex-direction: column; }
+      .theme-toggle { align-self: flex-end; }
+    }
   </style>
+  <script>
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+      document.documentElement.dataset.theme = 'dark';
+    }
+  </script>
 </head>
 <body>
   <div class="container">
-    <h1>📝 Todos</h1>
+    <div class="header">
+      <h1>📝 Todos</h1>
+      <label class="theme-toggle" for="themeToggle">
+        <span>Dark mode</span>
+        <input type="checkbox" id="themeToggle">
+        <span class="theme-switch" aria-hidden="true"></span>
+      </label>
+    </div>
     <div class="input-row">
       <input type="text" id="input" placeholder="What needs to be done?" autofocus>
       <input type="date" id="dueDate" aria-label="Due date">
@@ -46,6 +105,14 @@
     const input = document.getElementById('input');
     const dueDateInput = document.getElementById('dueDate');
     const list = document.getElementById('list');
+    const themeToggle = document.getElementById('themeToggle');
+
+    themeToggle.checked = document.documentElement.dataset.theme === 'dark';
+    themeToggle.addEventListener('change', () => {
+      const theme = themeToggle.checked ? 'dark' : 'light';
+      document.documentElement.dataset.theme = theme;
+      localStorage.setItem('theme', theme);
+    });
 
     input.addEventListener('keydown', e => { if (e.key === 'Enter') addTodo(); });
 
