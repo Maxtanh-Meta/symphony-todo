@@ -50,11 +50,12 @@
     .theme-toggle input:checked + .theme-switch::after { transform: translateX(20px); }
     .theme-toggle input:focus-visible + .theme-switch { outline: 2px solid var(--primary); outline-offset: 3px; }
     .input-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
-    input[type="text"], input[type="date"] { padding: 12px 16px; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem; outline: none; transition: border-color 0.2s, background 0.2s, color 0.2s; background: var(--control-bg); color: var(--text); }
+    input[type="text"], input[type="date"], select { padding: 12px 16px; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem; outline: none; transition: border-color 0.2s, background 0.2s, color 0.2s; background: var(--control-bg); color: var(--text); }
     input::placeholder { color: var(--subtle); }
     input[type="text"] { flex: 1 1 220px; }
     input[type="date"] { flex: 0 0 155px; }
-    input[type="text"]:focus, input[type="date"]:focus { border-color: var(--primary); }
+    select { flex: 0 0 125px; }
+    input[type="text"]:focus, input[type="date"]:focus, select:focus { border-color: var(--primary); }
     button { padding: 12px 20px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
     button:hover { background: var(--primary-hover); }
     .todo-list { list-style: none; }
@@ -64,6 +65,13 @@
     .todo-item.completed .todo-title { text-decoration: line-through; color: var(--subtle); }
     .due-date { color: var(--muted); font-size: 0.85rem; }
     .todo-item.completed .due-date { color: var(--subtle); }
+    .priority { align-self: flex-start; border-radius: 999px; padding: 2px 8px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
+    .priority-low { background: #dcfce7; color: #166534; }
+    .priority-medium { background: #fef3c7; color: #92400e; }
+    .priority-high { background: #fee2e2; color: #991b1b; }
+    :root[data-theme="dark"] .priority-low { background: #14532d; color: #bbf7d0; }
+    :root[data-theme="dark"] .priority-medium { background: #78350f; color: #fde68a; }
+    :root[data-theme="dark"] .priority-high { background: #7f1d1d; color: #fecaca; }
     .todo-item .check { width: 22px; height: 22px; border: 2px solid var(--border); border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex: 0 0 auto; }
     .todo-item .check:hover { border-color: var(--primary); }
     .todo-item.completed .check { background: var(--primary); border-color: var(--primary); }
@@ -97,6 +105,11 @@
     <div class="input-row">
       <input type="text" id="input" placeholder="What needs to be done?" autofocus>
       <input type="date" id="dueDate" aria-label="Due date">
+      <select id="priority" aria-label="Priority">
+        <option value="low">Low</option>
+        <option value="medium" selected>Medium</option>
+        <option value="high">High</option>
+      </select>
       <button onclick="addTodo()">Add</button>
     </div>
     <ul class="todo-list" id="list"></ul>
@@ -104,6 +117,7 @@
   <script>
     const input = document.getElementById('input');
     const dueDateInput = document.getElementById('dueDate');
+    const priorityInput = document.getElementById('priority');
     const list = document.getElementById('list');
     const themeToggle = document.getElementById('themeToggle');
 
@@ -120,10 +134,12 @@
       const title = input.value.trim();
       if (!title) return;
       const dueDate = dueDateInput.value;
-      const body = dueDate ? { title, dueDate } : { title };
+      const body = { title, priority: priorityInput.value };
+      if (dueDate) body.dueDate = dueDate;
       await fetch('/api/todos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       input.value = '';
       dueDateInput.value = '';
+      priorityInput.value = 'medium';
       loadTodos();
     }
 
@@ -161,6 +177,11 @@
       return `<time class="due-date" datetime="${dueDate}">Due ${escapeHTML(formatDueDate(dueDate))}</time>`;
     }
 
+    function renderPriority(priority) {
+      const value = priority || 'medium';
+      return `<span class="priority priority-${escapeHTML(value)}">${escapeHTML(value)}</span>`;
+    }
+
     async function loadTodos() {
       const todos = await fetch('/api/todos').then(r => r.json());
       if (!todos.length) { list.innerHTML = '<div class="empty">No todos yet — add one above!</div>'; return; }
@@ -169,6 +190,7 @@
           <div class="check" onclick="completeTodo(${t.id})"></div>
           <div class="todo-content">
             <span class="todo-title">${escapeHTML(t.title)}</span>
+            ${renderPriority(t.priority)}
             ${renderDueDate(t.dueDate)}
           </div>
           <button class="delete" onclick="removeTodo(${t.id})">×</button>

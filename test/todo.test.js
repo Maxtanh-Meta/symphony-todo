@@ -21,6 +21,7 @@ const t1 = app.add('Buy milk');
 assert(t1.id === 1, 'add returns todo with id');
 assert(t1.title === 'Buy milk', 'add sets title');
 assert(t1.dueDate === null, 'add defaults due date to null');
+assert(t1.priority === 'medium', 'add defaults priority to medium');
 assert(t1.completed === false, 'add defaults to not completed');
 assert(fs.existsSync(storagePath), 'add writes todos to storage file');
 
@@ -55,6 +56,23 @@ assert(restored.list().length === 2, 'constructor restores saved todos');
 assert(restored.list()[0].completed === true, 'constructor restores completed status');
 assert(restored.list()[1].dueDate === '2026-05-15', 'constructor restores due date');
 assert(restored.add('Read book').id === 4, 'constructor restores next id');
+
+// Priority
+const priorityStoragePath = path.join(tempDir, 'priority-todos.json');
+const priorityApp = new TodoApp(priorityStoragePath);
+const low = priorityApp.add('Low priority', null, 'low');
+const high = priorityApp.add('High priority', null, 'high');
+const medium = priorityApp.add('Medium priority');
+assert(low.priority === 'low', 'add stores low priority');
+assert(high.priority === 'high', 'add stores high priority');
+assert(medium.priority === 'medium', 'add stores default medium priority');
+assert(priorityApp.list().map(todo => todo.priority).join(',') === 'high,medium,low', 'list sorts todos by priority');
+
+try { priorityApp.add('Bad priority', null, 'urgent'); assert(false, 'add rejects invalid priority'); }
+catch (e) { assert(true, 'add rejects invalid priority'); }
+
+const restoredPriorityApp = new TodoApp(priorityStoragePath);
+assert(restoredPriorityApp.list().find(todo => todo.title === 'Low priority').priority === 'low', 'constructor restores priority');
 
 fs.rmSync(tempDir, { recursive: true, force: true });
 

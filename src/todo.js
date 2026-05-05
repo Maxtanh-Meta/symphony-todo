@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 
 const DEFAULT_STORAGE_PATH = path.join(__dirname, '..', 'data', 'todos.json');
+const PRIORITIES = ['low', 'medium', 'high'];
+const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
 
 class TodoApp {
   constructor(storagePath = DEFAULT_STORAGE_PATH) {
@@ -25,6 +27,7 @@ class TodoApp {
       id: Number(todo.id),
       title: todo.title,
       dueDate: TodoApp.normalizeDueDate(todo.dueDate),
+      priority: TodoApp.normalizePriority(todo.priority),
       completed: Boolean(todo.completed),
       createdAt: todo.createdAt ? new Date(todo.createdAt) : new Date(),
     }));
@@ -60,12 +63,26 @@ class TodoApp {
     return dueDate;
   }
 
-  add(title, dueDate = null) {
+  static normalizePriority(priority) {
+    if (priority === undefined || priority === null || priority === '') {
+      return 'medium';
+    }
+
+    if (!PRIORITIES.includes(priority)) {
+      throw new Error('priority must be low, medium, or high');
+    }
+
+    return priority;
+  }
+
+  add(title, dueDate = null, priority = 'medium') {
     const normalizedDueDate = TodoApp.normalizeDueDate(dueDate);
+    const normalizedPriority = TodoApp.normalizePriority(priority);
     const todo = {
       id: this.nextId++,
       title,
       dueDate: normalizedDueDate,
+      priority: normalizedPriority,
       completed: false,
       createdAt: new Date(),
     };
@@ -75,7 +92,7 @@ class TodoApp {
   }
 
   list() {
-    return this.todos;
+    return [...this.todos].sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority]);
   }
 
   complete(id) {
