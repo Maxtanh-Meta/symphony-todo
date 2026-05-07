@@ -70,6 +70,8 @@
     .todo-item.completed .todo-title { text-decoration: line-through; color: var(--subtle); }
     .due-date { color: var(--muted); font-size: 0.85rem; }
     .todo-item.completed .due-date { color: var(--subtle); }
+    .tag-list { display: flex; flex-wrap: wrap; gap: 4px; }
+    .tag { border-radius: 999px; padding: 2px 8px; background: var(--border); color: var(--muted); font-size: 0.72rem; font-weight: 600; }
     .priority { align-self: flex-start; border-radius: 999px; padding: 2px 8px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
     .priority-low { background: #dcfce7; color: #166534; }
     .priority-medium { background: #fef3c7; color: #92400e; }
@@ -120,6 +122,7 @@
         <option value="medium" selected>Medium</option>
         <option value="high">High</option>
       </select>
+      <input type="text" id="tags" placeholder="Tags, comma-separated" aria-label="Tags">
       <button onclick="addTodo()">Add</button>
     </div>
     <div class="filters">
@@ -136,6 +139,7 @@
     const input = document.getElementById('input');
     const dueDateInput = document.getElementById('dueDate');
     const priorityInput = document.getElementById('priority');
+    const tagsInput = document.getElementById('tags');
     const searchInput = document.getElementById('search');
     const list = document.getElementById('list');
     const themeToggle = document.getElementById('themeToggle');
@@ -166,12 +170,15 @@
       const title = input.value.trim();
       if (!title) return;
       const dueDate = dueDateInput.value;
+      const tags = tagsInput.value;
       const body = { title, priority: priorityInput.value };
       if (dueDate) body.dueDate = dueDate;
+      if (tags.trim()) body.tags = tags;
       await fetch('/api/todos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       input.value = '';
       dueDateInput.value = '';
       priorityInput.value = 'medium';
+      tagsInput.value = '';
       loadTodos();
     }
 
@@ -245,6 +252,11 @@
       return `<span class="priority priority-${escapeHTML(value)}">${escapeHTML(value)}</span>`;
     }
 
+    function renderTags(tags) {
+      if (!Array.isArray(tags) || !tags.length) return '';
+      return `<div class="tag-list">${tags.map(tag => `<span class="tag">${escapeHTML(tag)}</span>`).join('')}</div>`;
+    }
+
     function renderTodo(todo) {
       if (editingTodoId === todo.id) {
         return `
@@ -264,6 +276,7 @@
           <div class="todo-content">
             <span class="todo-title">${escapeHTML(todo.title)}</span>
             ${renderPriority(todo.priority)}
+            ${renderTags(todo.tags)}
             ${renderDueDate(todo.dueDate)}
           </div>
           <button class="edit" onclick="editTodo(${todo.id})">Edit</button>

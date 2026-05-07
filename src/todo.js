@@ -28,6 +28,7 @@ class TodoApp {
       title: todo.title,
       dueDate: TodoApp.normalizeDueDate(todo.dueDate),
       priority: TodoApp.normalizePriority(todo.priority),
+      tags: TodoApp.normalizeTags(todo.tags),
       completed: Boolean(todo.completed),
       createdAt: todo.createdAt ? new Date(todo.createdAt) : new Date(),
     }));
@@ -75,14 +76,27 @@ class TodoApp {
     return priority;
   }
 
-  add(title, dueDate = null, priority = 'medium') {
+  static normalizeTags(tags) {
+    if (tags === undefined || tags === null || tags === '') {
+      return [];
+    }
+
+    const values = Array.isArray(tags) ? tags : String(tags).split(',');
+    return values
+      .map(tag => String(tag).trim())
+      .filter(Boolean);
+  }
+
+  add(title, dueDate = null, priority = 'medium', tags = []) {
     const normalizedDueDate = TodoApp.normalizeDueDate(dueDate);
     const normalizedPriority = TodoApp.normalizePriority(priority);
+    const normalizedTags = TodoApp.normalizeTags(tags);
     const todo = {
       id: this.nextId++,
       title,
       dueDate: normalizedDueDate,
       priority: normalizedPriority,
+      tags: normalizedTags,
       completed: false,
       createdAt: new Date(),
     };
@@ -94,12 +108,14 @@ class TodoApp {
   list(options = {}) {
     const status = options.status || 'all';
     const search = (options.search || '').trim().toLowerCase();
+    const tag = (options.tag || '').trim().toLowerCase();
 
     return this.todos
       .filter(todo => {
         if (status === 'active' && todo.completed) return false;
         if (status === 'completed' && !todo.completed) return false;
         if (search && !todo.title.toLowerCase().includes(search)) return false;
+        if (tag && !todo.tags.some(todoTag => todoTag.toLowerCase() === tag)) return false;
         return true;
       })
       .sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority]);
