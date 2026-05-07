@@ -22,6 +22,11 @@ function parseBody(req) {
   });
 }
 
+function isTitleValidationError(error) {
+  return error.message === 'title is required'
+    || error.message === 'title must be 140 characters or fewer';
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
 
@@ -67,7 +72,7 @@ const server = http.createServer(async (req, res) => {
         return sendJSON(res, 200, app.remove(id));
       }
     } catch (e) {
-      const status = e.message === 'title is required' ? 400 : 404;
+      const status = isTitleValidationError(e) ? 400 : 404;
       return sendJSON(res, status, { error: e.message });
     }
   }
