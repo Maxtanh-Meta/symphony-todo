@@ -91,8 +91,18 @@ class TodoApp {
     return todo;
   }
 
-  list() {
-    return [...this.todos].sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority]);
+  list(options = {}) {
+    const status = options.status || 'all';
+    const search = (options.search || '').trim().toLowerCase();
+
+    return this.todos
+      .filter(todo => {
+        if (status === 'active' && todo.completed) return false;
+        if (status === 'completed' && !todo.completed) return false;
+        if (search && !todo.title.toLowerCase().includes(search)) return false;
+        return true;
+      })
+      .sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority]);
   }
 
   complete(id) {

@@ -74,6 +74,19 @@ catch (e) { assert(true, 'add rejects invalid priority'); }
 const restoredPriorityApp = new TodoApp(priorityStoragePath);
 assert(restoredPriorityApp.list().find(todo => todo.title === 'Low priority').priority === 'low', 'constructor restores priority');
 
+// Filters
+const filterStoragePath = path.join(tempDir, 'filter-todos.json');
+const filterApp = new TodoApp(filterStoragePath);
+filterApp.add('Write release notes', null, 'low');
+const completedHigh = filterApp.add('Fix login bug', null, 'high');
+filterApp.add('Review Search UI', null, 'medium');
+filterApp.complete(completedHigh.id);
+
+assert(filterApp.list({ status: 'active' }).map(todo => todo.title).join(',') === 'Review Search UI,Write release notes', 'list filters active todos');
+assert(filterApp.list({ status: 'completed' }).map(todo => todo.title).join(',') === 'Fix login bug', 'list filters completed todos');
+assert(filterApp.list({ search: 'search' }).map(todo => todo.title).join(',') === 'Review Search UI', 'list searches title case-insensitively');
+assert(filterApp.list({ status: 'active', search: 're' }).map(todo => todo.priority).join(',') === 'medium,low', 'list combines filters and preserves priority sort');
+
 fs.rmSync(tempDir, { recursive: true, force: true });
 
 console.log(`\n${passed} passed, ${failed} failed`);

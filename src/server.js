@@ -35,7 +35,10 @@ const server = http.createServer(async (req, res) => {
   // API routes
   if (url.pathname === '/api/todos') {
     if (req.method === 'GET') {
-      return sendJSON(res, 200, app.list());
+      return sendJSON(res, 200, app.list({
+        status: url.searchParams.get('status') || 'all',
+        search: url.searchParams.get('search') || '',
+      }));
     }
     if (req.method === 'POST') {
       const { title, dueDate, priority } = await parseBody(req);

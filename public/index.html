@@ -58,6 +58,11 @@
     input[type="text"]:focus, input[type="date"]:focus, select:focus { border-color: var(--primary); }
     button { padding: 12px 20px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
     button:hover { background: var(--primary-hover); }
+    .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .filter-buttons { display: flex; gap: 8px; }
+    .filter-button { padding: 10px 14px; background: var(--surface); color: var(--muted); border: 2px solid var(--border); }
+    .filter-button:hover, .filter-button.active { background: var(--primary); border-color: var(--primary); color: white; }
+    .search-input { flex: 1 1 180px; }
     .todo-list { list-style: none; }
     .todo-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--surface); border-radius: 8px; margin-bottom: 8px; box-shadow: 0 1px 3px var(--shadow); transition: background 0.2s, box-shadow 0.2s; }
     .todo-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
@@ -112,14 +117,24 @@
       </select>
       <button onclick="addTodo()">Add</button>
     </div>
+    <div class="filters">
+      <div class="filter-buttons" role="group" aria-label="Todo status">
+        <button class="filter-button active" data-status="all" aria-pressed="true" onclick="setStatusFilter('all')">All</button>
+        <button class="filter-button" data-status="active" aria-pressed="false" onclick="setStatusFilter('active')">Active</button>
+        <button class="filter-button" data-status="completed" aria-pressed="false" onclick="setStatusFilter('completed')">Completed</button>
+      </div>
+      <input type="text" class="search-input" id="search" placeholder="Search todos" aria-label="Search todos">
+    </div>
     <ul class="todo-list" id="list"></ul>
   </div>
   <script>
     const input = document.getElementById('input');
     const dueDateInput = document.getElementById('dueDate');
     const priorityInput = document.getElementById('priority');
+    const searchInput = document.getElementById('search');
     const list = document.getElementById('list');
     const themeToggle = document.getElementById('themeToggle');
+    let statusFilter = 'all';
 
     themeToggle.checked = document.documentElement.dataset.theme === 'dark';
     themeToggle.addEventListener('change', () => {
@@ -129,6 +144,17 @@
     });
 
     input.addEventListener('keydown', e => { if (e.key === 'Enter') addTodo(); });
+    searchInput.addEventListener('input', loadTodos);
+
+    function setStatusFilter(status) {
+      statusFilter = status;
+      document.querySelectorAll('.filter-button').forEach(button => {
+        const active = button.dataset.status === statusFilter;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+      loadTodos();
+    }
 
     async function addTodo() {
       const title = input.value.trim();
@@ -183,8 +209,16 @@
     }
 
     async function loadTodos() {
-      const todos = await fetch('/api/todos').then(r => r.json());
-      if (!todos.length) { list.innerHTML = '<div class="empty">No todos yet — add one above!</div>'; return; }
+      const params = new URLSearchParams();
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      if (searchInput.value.trim()) params.set('search', searchInput.value.trim());
+      const query = params.toString();
+      const todos = await fetch(`/api/todos${query ? `?${query}` : ''}`).then(r => r.json());
+      if (!todos.length) {
+        const emptyText = query ? 'No todos match your filters.' : 'No todos yet — add one above!';
+        list.innerHTML = `<div class="empty">${emptyText}</div>`;
+        return;
+      }
       list.innerHTML = todos.map(t => `
         <li class="todo-item ${t.completed ? 'completed' : ''}">
           <div class="check" onclick="completeTodo(${t.id})"></div>
