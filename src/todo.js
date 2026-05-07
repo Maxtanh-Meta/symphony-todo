@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const DEFAULT_STORAGE_PATH = path.join(__dirname, '..', 'data', 'todos.json');
+const MAX_TITLE_LENGTH = 140;
 const PRIORITIES = ['low', 'medium', 'high'];
 const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
 
@@ -87,13 +88,25 @@ class TodoApp {
       .filter(Boolean);
   }
 
+  static normalizeTitle(title) {
+    if (typeof title !== 'string' || !title.trim()) throw new Error('title is required');
+
+    const normalizedTitle = title.trim();
+    if (normalizedTitle.length > MAX_TITLE_LENGTH) {
+      throw new Error('title must be 140 characters or fewer');
+    }
+
+    return normalizedTitle;
+  }
+
   add(title, dueDate = null, priority = 'medium', tags = []) {
+    const normalizedTitle = TodoApp.normalizeTitle(title);
     const normalizedDueDate = TodoApp.normalizeDueDate(dueDate);
     const normalizedPriority = TodoApp.normalizePriority(priority);
     const normalizedTags = TodoApp.normalizeTags(tags);
     const todo = {
       id: this.nextId++,
-      title,
+      title: normalizedTitle,
       dueDate: normalizedDueDate,
       priority: normalizedPriority,
       tags: normalizedTags,
@@ -132,8 +145,7 @@ class TodoApp {
   updateTitle(id, title) {
     const todo = this.todos.find(t => t.id === id);
     if (!todo) throw new Error(`Todo ${id} not found`);
-    if (typeof title !== 'string' || !title.trim()) throw new Error('title is required');
-    todo.title = title.trim();
+    todo.title = TodoApp.normalizeTitle(title);
     this.save();
     return todo;
   }

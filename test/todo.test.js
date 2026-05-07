@@ -59,6 +59,18 @@ catch (e) { assert(e.message === 'Todo 999 not found', 'updateTitle throws on mi
 try { app.updateTitle(1, '   '); assert(false, 'updateTitle rejects empty title'); }
 catch (e) { assert(e.message === 'title is required', 'updateTitle rejects empty title'); }
 
+const titleLimitStoragePath = path.join(tempDir, 'title-limit-todos.json');
+const titleLimitApp = new TodoApp(titleLimitStoragePath);
+const maxTitle = 'a'.repeat(140);
+const tooLongTitle = 'a'.repeat(141);
+assert(titleLimitApp.add(maxTitle).title === maxTitle, 'add accepts 140 character title');
+
+try { titleLimitApp.add(tooLongTitle); assert(false, 'add rejects title over 140 characters'); }
+catch (e) { assert(e.message === 'title must be 140 characters or fewer', 'add rejects title over 140 characters'); }
+
+try { titleLimitApp.updateTitle(1, tooLongTitle); assert(false, 'updateTitle rejects title over 140 characters'); }
+catch (e) { assert(e.message === 'title must be 140 characters or fewer', 'updateTitle rejects title over 140 characters'); }
+
 try { app.add('Bad date', '2026-02-30'); assert(false, 'add rejects invalid due date'); }
 catch (e) { assert(true, 'add rejects invalid due date'); }
 

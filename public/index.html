@@ -50,6 +50,10 @@
     .theme-toggle input:checked + .theme-switch::after { transform: translateX(20px); }
     .theme-toggle input:focus-visible + .theme-switch { outline: 2px solid var(--primary); outline-offset: 3px; }
     .input-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+    .title-field { flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+    .title-field input[type="text"] { width: 100%; flex: 0 0 auto; }
+    .char-counter { align-self: flex-end; color: var(--muted); font-size: 0.78rem; line-height: 1; }
+    .char-counter.near-limit { color: var(--danger); font-weight: 600; }
     input[type="text"], input[type="date"], select { padding: 12px 16px; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem; outline: none; transition: border-color 0.2s, background 0.2s, color 0.2s; background: var(--control-bg); color: var(--text); }
     input::placeholder { color: var(--subtle); }
     input[type="text"] { flex: 1 1 220px; }
@@ -84,7 +88,8 @@
     .todo-item.completed .check { background: var(--primary); border-color: var(--primary); }
     .todo-item.completed .check::after { content: '✓'; color: white; font-size: 14px; }
     .edit-row { flex: 1; min-width: 0; display: flex; gap: 8px; align-items: center; }
-    .edit-input { min-width: 0; flex: 1 1 auto; }
+    .edit-row .title-field { flex: 1 1 auto; }
+    .edit-input { min-width: 0; }
     .todo-item .edit, .todo-item .cancel { background: none; border: none; color: var(--subtle); font-size: 0.9rem; cursor: pointer; padding: 4px 8px; }
     .todo-item .edit:hover, .todo-item .cancel:hover { color: var(--primary); background: transparent; }
     .todo-item .save { padding: 8px 12px; font-size: 0.9rem; }
@@ -115,7 +120,10 @@
       </label>
     </div>
     <div class="input-row">
-      <input type="text" id="input" placeholder="What needs to be done?" autofocus>
+      <label class="title-field" for="input">
+        <input type="text" id="input" placeholder="What needs to be done?" maxlength="140" autofocus>
+        <span class="char-counter" id="titleCounter">0/140</span>
+      </label>
       <input type="date" id="dueDate" aria-label="Due date">
       <select id="priority" aria-label="Priority">
         <option value="low">Low</option>
@@ -136,7 +144,10 @@
     <ul class="todo-list" id="list"></ul>
   </div>
   <script>
+    const MAX_TITLE_LENGTH = 140;
+    const TITLE_WARNING_LENGTH = 120;
     const input = document.getElementById('input');
+    const titleCounter = document.getElementById('titleCounter');
     const dueDateInput = document.getElementById('dueDate');
     const priorityInput = document.getElementById('priority');
     const tagsInput = document.getElementById('tags');
@@ -154,7 +165,15 @@
     });
 
     input.addEventListener('keydown', e => { if (e.key === 'Enter') addTodo(); });
+    input.addEventListener('input', () => updateTitleCounter(input, titleCounter));
     searchInput.addEventListener('input', loadTodos);
+
+    function updateTitleCounter(inputElement, counterElement) {
+      if (!counterElement) return;
+      const length = inputElement.value.length;
+      counterElement.textContent = `${length}/${MAX_TITLE_LENGTH}`;
+      counterElement.classList.toggle('near-limit', length >= TITLE_WARNING_LENGTH);
+    }
 
     function setStatusFilter(status) {
       statusFilter = status;
@@ -176,6 +195,7 @@
       if (tags.trim()) body.tags = tags;
       await fetch('/api/todos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       input.value = '';
+      updateTitleCounter(input, titleCounter);
       dueDateInput.value = '';
       priorityInput.value = 'medium';
       tagsInput.value = '';
@@ -262,7 +282,10 @@
         return `
           <li class="todo-item ${todo.completed ? 'completed' : ''}">
             <div class="edit-row">
-              <input type="text" class="edit-input" id="edit-${todo.id}" value="${escapeHTML(todo.title)}" onkeydown="handleEditKeydown(event, ${todo.id})" autofocus>
+              <label class="title-field" for="edit-${todo.id}">
+                <input type="text" class="edit-input" id="edit-${todo.id}" value="${escapeHTML(todo.title)}" maxlength="140" oninput="updateTitleCounter(this, document.getElementById('edit-counter-${todo.id}'))" onkeydown="handleEditKeydown(event, ${todo.id})" autofocus>
+                <span class="char-counter" id="edit-counter-${todo.id}">${todo.title.length}/${MAX_TITLE_LENGTH}</span>
+              </label>
               <button class="save" onclick="saveTodo(${todo.id})">Save</button>
               <button class="cancel" onclick="cancelEdit()">Cancel</button>
             </div>
@@ -299,11 +322,13 @@
       list.innerHTML = todos.map(renderTodo).join('');
       const editInput = document.getElementById(`edit-${editingTodoId}`);
       if (editInput) {
+        updateTitleCounter(editInput, document.getElementById(`edit-counter-${editingTodoId}`));
         editInput.focus();
         editInput.setSelectionRange(editInput.value.length, editInput.value.length);
       }
     }
 
+    updateTitleCounter(input, titleCounter);
     loadTodos();
   </script>
 </body>
