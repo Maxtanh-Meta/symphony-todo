@@ -36,6 +36,11 @@ assert(app.list().length === 3, 'list returns all todos');
 const done = app.complete(1);
 assert(done.completed === true, 'complete marks todo done');
 
+// Update title
+const renamed = app.updateTitle(2, '  Pay mortgage  ');
+assert(renamed.title === 'Pay mortgage', 'updateTitle stores trimmed title');
+assert(app.list().find(todo => todo.id === 2).title === 'Pay mortgage', 'updateTitle updates existing todo');
+
 // Remove
 app.remove(3);
 assert(app.list().length === 2, 'remove deletes todo');
@@ -47,6 +52,12 @@ catch (e) { assert(true, 'complete throws on missing id'); }
 try { app.remove(999); assert(false, 'remove throws on missing id'); }
 catch (e) { assert(true, 'remove throws on missing id'); }
 
+try { app.updateTitle(999, 'Missing'); assert(false, 'updateTitle throws on missing id'); }
+catch (e) { assert(e.message === 'Todo 999 not found', 'updateTitle throws on missing id'); }
+
+try { app.updateTitle(1, '   '); assert(false, 'updateTitle rejects empty title'); }
+catch (e) { assert(e.message === 'title is required', 'updateTitle rejects empty title'); }
+
 try { app.add('Bad date', '2026-02-30'); assert(false, 'add rejects invalid due date'); }
 catch (e) { assert(true, 'add rejects invalid due date'); }
 
@@ -54,6 +65,7 @@ catch (e) { assert(true, 'add rejects invalid due date'); }
 const restored = new TodoApp(storagePath);
 assert(restored.list().length === 2, 'constructor restores saved todos');
 assert(restored.list()[0].completed === true, 'constructor restores completed status');
+assert(restored.list()[1].title === 'Pay mortgage', 'constructor restores updated title');
 assert(restored.list()[1].dueDate === '2026-05-15', 'constructor restores due date');
 assert(restored.add('Read book').id === 4, 'constructor restores next id');
 

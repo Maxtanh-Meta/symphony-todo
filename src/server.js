@@ -56,13 +56,18 @@ const server = http.createServer(async (req, res) => {
     const id = parseInt(match[1]);
     try {
       if (req.method === 'PATCH') {
+        const body = await parseBody(req);
+        if (Object.prototype.hasOwnProperty.call(body, 'title')) {
+          return sendJSON(res, 200, app.updateTitle(id, body.title));
+        }
         return sendJSON(res, 200, app.complete(id));
       }
       if (req.method === 'DELETE') {
         return sendJSON(res, 200, app.remove(id));
       }
     } catch (e) {
-      return sendJSON(res, 404, { error: e.message });
+      const status = e.message === 'title is required' ? 400 : 404;
+      return sendJSON(res, status, { error: e.message });
     }
   }
 

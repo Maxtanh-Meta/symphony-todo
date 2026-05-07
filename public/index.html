@@ -81,6 +81,11 @@
     .todo-item .check:hover { border-color: var(--primary); }
     .todo-item.completed .check { background: var(--primary); border-color: var(--primary); }
     .todo-item.completed .check::after { content: '✓'; color: white; font-size: 14px; }
+    .edit-row { flex: 1; min-width: 0; display: flex; gap: 8px; align-items: center; }
+    .edit-input { min-width: 0; flex: 1 1 auto; }
+    .todo-item .edit, .todo-item .cancel { background: none; border: none; color: var(--subtle); font-size: 0.9rem; cursor: pointer; padding: 4px 8px; }
+    .todo-item .edit:hover, .todo-item .cancel:hover { color: var(--primary); background: transparent; }
+    .todo-item .save { padding: 8px 12px; font-size: 0.9rem; }
     .todo-item .delete { background: none; border: none; color: var(--subtle); font-size: 1.2rem; cursor: pointer; padding: 4px 8px; }
     .todo-item .delete:hover { color: var(--danger); background: transparent; }
     .empty { text-align: center; color: var(--subtle); padding: 40px; }
@@ -135,6 +140,7 @@
     const list = document.getElementById('list');
     const themeToggle = document.getElementById('themeToggle');
     let statusFilter = 'all';
+    let editingTodoId = null;
 
     themeToggle.checked = document.documentElement.dataset.theme === 'dark';
     themeToggle.addEventListener('change', () => {
@@ -179,6 +185,37 @@
       loadTodos();
     }
 
+    function editTodo(id) {
+      editingTodoId = id;
+      loadTodos();
+    }
+
+    function cancelEdit() {
+      editingTodoId = null;
+      loadTodos();
+    }
+
+    async function saveTodo(id) {
+      const editInput = document.getElementById(`edit-${id}`);
+      const title = editInput.value.trim();
+      if (!title) {
+        editInput.focus();
+        return;
+      }
+      await fetch(`/api/todos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      });
+      editingTodoId = null;
+      loadTodos();
+    }
+
+    function handleEditKeydown(event, id) {
+      if (event.key === 'Enter') saveTodo(id);
+      if (event.key === 'Escape') cancelEdit();
+    }
+
     function escapeHTML(value) {
       return String(value).replace(/[&<>"']/g, char => ({
         '&': '&amp;',
@@ -208,6 +245,33 @@
       return `<span class="priority priority-${escapeHTML(value)}">${escapeHTML(value)}</span>`;
     }
 
+    function renderTodo(todo) {
+      if (editingTodoId === todo.id) {
+        return `
+          <li class="todo-item ${todo.completed ? 'completed' : ''}">
+            <div class="edit-row">
+              <input type="text" class="edit-input" id="edit-${todo.id}" value="${escapeHTML(todo.title)}" onkeydown="handleEditKeydown(event, ${todo.id})" autofocus>
+              <button class="save" onclick="saveTodo(${todo.id})">Save</button>
+              <button class="cancel" onclick="cancelEdit()">Cancel</button>
+            </div>
+          </li>
+        `;
+      }
+
+      return `
+        <li class="todo-item ${todo.completed ? 'completed' : ''}">
+          <div class="check" onclick="completeTodo(${todo.id})"></div>
+          <div class="todo-content">
+            <span class="todo-title">${escapeHTML(todo.title)}</span>
+            ${renderPriority(todo.priority)}
+            ${renderDueDate(todo.dueDate)}
+          </div>
+          <button class="edit" onclick="editTodo(${todo.id})">Edit</button>
+          <button class="delete" onclick="removeTodo(${todo.id})">×</button>
+        </li>
+      `;
+    }
+
     async function loadTodos() {
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.set('status', statusFilter);
@@ -219,17 +283,12 @@
         list.innerHTML = `<div class="empty">${emptyText}</div>`;
         return;
       }
-      list.innerHTML = todos.map(t => `
-        <li class="todo-item ${t.completed ? 'completed' : ''}">
-          <div class="check" onclick="completeTodo(${t.id})"></div>
-          <div class="todo-content">
-            <span class="todo-title">${escapeHTML(t.title)}</span>
-            ${renderPriority(t.priority)}
-            ${renderDueDate(t.dueDate)}
-          </div>
-          <button class="delete" onclick="removeTodo(${t.id})">×</button>
-        </li>
-      `).join('');
+      list.innerHTML = todos.map(renderTodo).join('');
+      const editInput = document.getElementById(`edit-${editingTodoId}`);
+      if (editInput) {
+        editInput.focus();
+        editInput.setSelectionRange(editInput.value.length, editInput.value.length);
+      }
     }
 
     loadTodos();

@@ -113,6 +113,15 @@ class TodoApp {
     return todo;
   }
 
+  updateTitle(id, title) {
+    const todo = this.todos.find(t => t.id === id);
+    if (!todo) throw new Error(`Todo ${id} not found`);
+    if (typeof title !== 'string' || !title.trim()) throw new Error('title is required');
+    todo.title = title.trim();
+    this.save();
+    return todo;
+  }
+
   remove(id) {
     const index = this.todos.findIndex(t => t.id === id);
     if (index === -1) throw new Error(`Todo ${id} not found`);
