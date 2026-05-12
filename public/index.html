@@ -311,7 +311,8 @@
 
     function renderPriority(priority) {
       const value = priority || 'medium';
-      return `<span class="priority priority-${escapeHTML(value)}">${escapeHTML(value)}</span>`;
+      const label = value.charAt(0).toUpperCase() + value.slice(1);
+      return `<span class="priority priority-${escapeHTML(value)}">${escapeHTML(label)}</span>`;
     }
 
     function renderTags(tags) {

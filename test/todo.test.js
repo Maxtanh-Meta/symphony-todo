@@ -91,6 +91,7 @@ const medium = priorityApp.add('Medium priority');
 assert(low.priority === 'low', 'add stores low priority');
 assert(high.priority === 'high', 'add stores high priority');
 assert(medium.priority === 'medium', 'add stores default medium priority');
+assert([...new Set(priorityApp.list().map(todo => todo.priority))].sort().join(',') === 'high,low,medium', 'list exposes all supported priority values');
 assert(priorityApp.list().map(todo => todo.priority).join(',') === 'high,medium,low', 'list sorts todos by priority');
 
 try { priorityApp.add('Bad priority', null, 'urgent'); assert(false, 'add rejects invalid priority'); }
