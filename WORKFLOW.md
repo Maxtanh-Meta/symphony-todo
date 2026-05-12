@@ -16,7 +16,24 @@ Repository context:
 - Tests: test/todo.test.js
 - Run tests with: node test/todo.test.js
 
-Rules:
+## Comments
+
+Read ALL comments on this issue before planning. Comments may contain:
+- Clarifications from the author
+- Feedback on previous plans
+- Constraints or preferences not in the original description
+
+Incorporate all comment context into your plan.
+
+## Before planning
+
+If the issue description is ambiguous or missing critical details:
+- List your assumptions clearly in the plan
+- Note any alternative interpretations you considered
+- If truly blocked, state what clarification is needed
+
+## Rules
+
 1. Keep changes minimal and well-tested.
 2. Follow the existing style of the surrounding code.
 3. Do not edit WORKFLOW.md or any file under .symphony-go/.
