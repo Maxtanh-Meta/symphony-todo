@@ -3,8 +3,6 @@ const path = require('path');
 
 const DEFAULT_STORAGE_PATH = path.join(__dirname, '..', 'data', 'todos.json');
 const MAX_TITLE_LENGTH = 140;
-const PRIORITIES = ['low', 'medium', 'high'];
-const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
 
 class TodoApp {
   constructor(storagePath = DEFAULT_STORAGE_PATH) {
@@ -28,7 +26,6 @@ class TodoApp {
       id: Number(todo.id),
       title: todo.title,
       dueDate: TodoApp.normalizeDueDate(todo.dueDate),
-      priority: TodoApp.normalizePriority(todo.priority),
       tags: TodoApp.normalizeTags(todo.tags),
       completed: Boolean(todo.completed),
       createdAt: todo.createdAt ? new Date(todo.createdAt) : new Date(),
@@ -65,18 +62,6 @@ class TodoApp {
     return dueDate;
   }
 
-  static normalizePriority(priority) {
-    if (priority === undefined || priority === null || priority === '') {
-      return 'medium';
-    }
-
-    if (!PRIORITIES.includes(priority)) {
-      throw new Error('priority must be low, medium, or high');
-    }
-
-    return priority;
-  }
-
   static normalizeTags(tags) {
     if (tags === undefined || tags === null || tags === '') {
       return [];
@@ -99,16 +84,14 @@ class TodoApp {
     return normalizedTitle;
   }
 
-  add(title, dueDate = null, priority = 'medium', tags = []) {
+  add(title, dueDate = null, tags = []) {
     const normalizedTitle = TodoApp.normalizeTitle(title);
     const normalizedDueDate = TodoApp.normalizeDueDate(dueDate);
-    const normalizedPriority = TodoApp.normalizePriority(priority);
     const normalizedTags = TodoApp.normalizeTags(tags);
     const todo = {
       id: this.nextId++,
       title: normalizedTitle,
       dueDate: normalizedDueDate,
-      priority: normalizedPriority,
       tags: normalizedTags,
       completed: false,
       createdAt: new Date(),
@@ -123,15 +106,13 @@ class TodoApp {
     const search = (options.search || '').trim().toLowerCase();
     const tag = (options.tag || '').trim().toLowerCase();
 
-    return this.todos
-      .filter(todo => {
-        if (status === 'active' && todo.completed) return false;
-        if (status === 'completed' && !todo.completed) return false;
-        if (search && !todo.title.toLowerCase().includes(search)) return false;
-        if (tag && !todo.tags.some(todoTag => todoTag.toLowerCase() === tag)) return false;
-        return true;
-      })
-      .sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority]);
+    return this.todos.filter(todo => {
+      if (status === 'active' && todo.completed) return false;
+      if (status === 'completed' && !todo.completed) return false;
+      if (search && !todo.title.toLowerCase().includes(search)) return false;
+      if (tag && !todo.tags.some(todoTag => todoTag.toLowerCase() === tag)) return false;
+      return true;
+    });
   }
 
   complete(id) {

@@ -21,7 +21,6 @@ const t1 = app.add('Buy milk');
 assert(t1.id === 1, 'add returns todo with id');
 assert(t1.title === 'Buy milk', 'add sets title');
 assert(t1.dueDate === null, 'add defaults due date to null');
-assert(t1.priority === 'medium', 'add defaults priority to medium');
 assert(Array.isArray(t1.tags) && t1.tags.length === 0, 'add defaults tags to empty array');
 assert(t1.completed === false, 'add defaults to not completed');
 assert(fs.existsSync(storagePath), 'add writes todos to storage file');
@@ -82,28 +81,25 @@ assert(restored.list()[1].title === 'Pay mortgage', 'constructor restores update
 assert(restored.list()[1].dueDate === '2026-05-15', 'constructor restores due date');
 assert(restored.add('Read book').id === 4, 'constructor restores next id');
 
-// Priority
-const priorityStoragePath = path.join(tempDir, 'priority-todos.json');
-const priorityApp = new TodoApp(priorityStoragePath);
-const low = priorityApp.add('Low priority', null, 'low');
-const high = priorityApp.add('High priority', null, 'high');
-const medium = priorityApp.add('Medium priority');
-assert(low.priority === 'low', 'add stores low priority');
-assert(high.priority === 'high', 'add stores high priority');
-assert(medium.priority === 'medium', 'add stores default medium priority');
-assert(priorityApp.list().map(todo => todo.priority).join(',') === 'high,medium,low', 'list sorts todos by priority');
-
-try { priorityApp.add('Bad priority', null, 'urgent'); assert(false, 'add rejects invalid priority'); }
-catch (e) { assert(true, 'add rejects invalid priority'); }
-
-const restoredPriorityApp = new TodoApp(priorityStoragePath);
-assert(restoredPriorityApp.list().find(todo => todo.title === 'Low priority').priority === 'low', 'constructor restores priority');
+const oldPriorityStoragePath = path.join(tempDir, 'old-priority-todos.json');
+fs.writeFileSync(oldPriorityStoragePath, JSON.stringify({
+  nextId: 2,
+  todos: [{
+    id: 1,
+    title: 'Old priority todo',
+    priority: 'high',
+    completed: false,
+    createdAt: new Date().toISOString(),
+  }],
+}));
+const oldPriorityApp = new TodoApp(oldPriorityStoragePath);
+assert(!Object.prototype.hasOwnProperty.call(oldPriorityApp.list()[0], 'priority'), 'constructor ignores old priority field');
 
 // Tags
 const tagStoragePath = path.join(tempDir, 'tag-todos.json');
 const tagApp = new TodoApp(tagStoragePath);
-const tagged = tagApp.add('Buy groceries', null, 'medium', ' home, Errands, ,urgent ');
-const arrayTagged = tagApp.add('File taxes', null, 'high', [' finance ', '', 'Urgent']);
+const tagged = tagApp.add('Buy groceries', null, ' home, Errands, ,urgent ');
+const arrayTagged = tagApp.add('File taxes', null, [' finance ', '', 'Urgent']);
 assert(tagged.tags.join(',') === 'home,Errands,urgent', 'add stores normalized comma-separated tags');
 assert(arrayTagged.tags.join(',') === 'finance,Urgent', 'add stores normalized array tags');
 
@@ -120,26 +116,26 @@ assert(Array.isArray(oldTagApp.list()[0].tags) && oldTagApp.list()[0].tags.lengt
 
 const tagFilterStoragePath = path.join(tempDir, 'tag-filter-todos.json');
 const tagFilterApp = new TodoApp(tagFilterStoragePath);
-tagFilterApp.add('Low home task', null, 'low', 'Home');
-const completedUrgent = tagFilterApp.add('High work task', null, 'high', 'work,urgent');
-tagFilterApp.add('Medium home task', null, 'medium', 'home,review');
+tagFilterApp.add('First home task', null, 'Home');
+const completedUrgent = tagFilterApp.add('Work task', null, 'work,urgent');
+tagFilterApp.add('Second home task', null, 'home,review');
 tagFilterApp.complete(completedUrgent.id);
-assert(tagFilterApp.list({ tag: 'HOME' }).map(todo => todo.title).join(',') === 'Medium home task,Low home task', 'list filters tags case-insensitively and preserves priority sort');
-assert(tagFilterApp.list({ status: 'completed', tag: 'urgent' }).map(todo => todo.title).join(',') === 'High work task', 'list combines status and tag filters');
-assert(tagFilterApp.list({ search: 'medium', tag: 'review' }).map(todo => todo.title).join(',') === 'Medium home task', 'list combines search and tag filters');
+assert(tagFilterApp.list({ tag: 'HOME' }).map(todo => todo.title).join(',') === 'First home task,Second home task', 'list filters tags case-insensitively in insertion order');
+assert(tagFilterApp.list({ status: 'completed', tag: 'urgent' }).map(todo => todo.title).join(',') === 'Work task', 'list combines status and tag filters');
+assert(tagFilterApp.list({ search: 'second', tag: 'review' }).map(todo => todo.title).join(',') === 'Second home task', 'list combines search and tag filters');
 
 // Filters
 const filterStoragePath = path.join(tempDir, 'filter-todos.json');
 const filterApp = new TodoApp(filterStoragePath);
-filterApp.add('Write release notes', null, 'low');
-const completedHigh = filterApp.add('Fix login bug', null, 'high');
-filterApp.add('Review Search UI', null, 'medium');
-filterApp.complete(completedHigh.id);
+filterApp.add('Write release notes');
+const completedBug = filterApp.add('Fix login bug');
+filterApp.add('Review Search UI');
+filterApp.complete(completedBug.id);
 
-assert(filterApp.list({ status: 'active' }).map(todo => todo.title).join(',') === 'Review Search UI,Write release notes', 'list filters active todos');
+assert(filterApp.list({ status: 'active' }).map(todo => todo.title).join(',') === 'Write release notes,Review Search UI', 'list filters active todos in insertion order');
 assert(filterApp.list({ status: 'completed' }).map(todo => todo.title).join(',') === 'Fix login bug', 'list filters completed todos');
 assert(filterApp.list({ search: 'search' }).map(todo => todo.title).join(',') === 'Review Search UI', 'list searches title case-insensitively');
-assert(filterApp.list({ status: 'active', search: 're' }).map(todo => todo.priority).join(',') === 'medium,low', 'list combines filters and preserves priority sort');
+assert(filterApp.list({ status: 'active', search: 're' }).map(todo => todo.title).join(',') === 'Write release notes,Review Search UI', 'list combines filters in insertion order');
 
 fs.rmSync(tempDir, { recursive: true, force: true });
 
