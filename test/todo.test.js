@@ -35,6 +35,9 @@ assert(app.list().length === 3, 'list returns all todos');
 // Complete
 const done = app.complete(1);
 assert(done.completed === true, 'complete marks todo done');
+const activeAgain = app.setCompleted(1, false);
+assert(activeAgain.completed === false, 'setCompleted can mark todo active again');
+app.setCompleted(1, true);
 
 // Update title
 const renamed = app.updateTitle(2, '  Pay mortgage  ');
@@ -48,6 +51,9 @@ assert(app.list().length === 2, 'remove deletes todo');
 // Error handling
 try { app.complete(999); assert(false, 'complete throws on missing id'); }
 catch (e) { assert(true, 'complete throws on missing id'); }
+
+try { app.setCompleted(999, false); assert(false, 'setCompleted throws on missing id'); }
+catch (e) { assert(e.message === 'Todo 999 not found', 'setCompleted throws on missing id'); }
 
 try { app.remove(999); assert(false, 'remove throws on missing id'); }
 catch (e) { assert(true, 'remove throws on missing id'); }
@@ -136,6 +142,14 @@ assert(filterApp.list({ status: 'active' }).map(todo => todo.title).join(',') ==
 assert(filterApp.list({ status: 'completed' }).map(todo => todo.title).join(',') === 'Fix login bug', 'list filters completed todos');
 assert(filterApp.list({ search: 'search' }).map(todo => todo.title).join(',') === 'Review Search UI', 'list searches title case-insensitively');
 assert(filterApp.list({ status: 'active', search: 're' }).map(todo => todo.title).join(',') === 'Write release notes,Review Search UI', 'list combines filters in insertion order');
+
+filterApp.setCompleted(completedBug.id, false);
+assert(filterApp.list({ status: 'completed' }).length === 0, 'list excludes unchecked todos from completed filter');
+assert(filterApp.list({ status: 'active' }).map(todo => todo.title).join(',') === 'Write release notes,Fix login bug,Review Search UI', 'list includes unchecked todos in active filter');
+
+const restoredFilterApp = new TodoApp(filterStoragePath);
+assert(restoredFilterApp.list().find(todo => todo.id === completedBug.id).completed === false, 'constructor restores unchecked completed status');
+assert(restoredFilterApp.list({ status: 'active' }).map(todo => todo.title).join(',') === 'Write release notes,Fix login bug,Review Search UI', 'restored unchecked todo appears in active filter');
 
 fs.rmSync(tempDir, { recursive: true, force: true });
 
