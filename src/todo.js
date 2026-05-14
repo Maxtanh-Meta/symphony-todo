@@ -116,9 +116,14 @@ class TodoApp {
   }
 
   complete(id) {
+    return this.setCompleted(id, true);
+  }
+
+  setCompleted(id, completed) {
     const todo = this.todos.find(t => t.id === id);
     if (!todo) throw new Error(`Todo ${id} not found`);
-    todo.completed = true;
+    if (typeof completed !== 'boolean') throw new Error('completed must be boolean');
+    todo.completed = completed;
     this.save();
     return todo;
   }

@@ -77,8 +77,8 @@
     .todo-item.completed .due-date { color: var(--subtle); }
     .tag-list { display: flex; flex-wrap: wrap; gap: 4px; }
     .tag { border-radius: 999px; padding: 2px 8px; background: var(--border); color: var(--muted); font-size: 0.72rem; font-weight: 600; }
-    .todo-item .check { width: 22px; height: 22px; border: 2px solid var(--border); border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex: 0 0 auto; }
-    .todo-item .check:hover { border-color: var(--primary); }
+    .todo-item .check { width: 22px; height: 22px; padding: 0; background: transparent; color: inherit; border: 2px solid var(--border); border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex: 0 0 auto; }
+    .todo-item .check:hover { border-color: var(--primary); background: transparent; }
     .todo-item.completed .check { background: var(--primary); border-color: var(--primary); }
     .todo-item.completed .check::after { content: '✓'; color: white; font-size: 14px; }
     .edit-row { flex: 1; min-width: 0; display: flex; gap: 8px; align-items: center; }
@@ -191,8 +191,12 @@
       loadTodos();
     }
 
-    async function completeTodo(id) {
-      await fetch(`/api/todos/${id}`, { method: 'PATCH' });
+    async function toggleTodo(id, completed) {
+      await fetch(`/api/todos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed }),
+      });
       loadTodos();
     }
 
@@ -279,7 +283,7 @@
 
       return `
         <li class="todo-item ${todo.completed ? 'completed' : ''}">
-          <div class="check" onclick="completeTodo(${todo.id})"></div>
+          <button class="check" type="button" aria-pressed="${todo.completed ? 'true' : 'false'}" aria-label="${todo.completed ? 'Mark active' : 'Mark completed'}" onclick="toggleTodo(${todo.id}, ${todo.completed ? 'false' : 'true'})"></button>
           <div class="todo-content">
             <span class="todo-title">${escapeHTML(todo.title)}</span>
             ${renderTags(todo.tags)}

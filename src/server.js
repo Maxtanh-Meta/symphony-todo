@@ -27,6 +27,10 @@ function isTitleValidationError(error) {
     || error.message === 'title must be 140 characters or fewer';
 }
 
+function isCompletedValidationError(error) {
+  return error.message === 'completed must be boolean';
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
 
@@ -63,8 +67,20 @@ const server = http.createServer(async (req, res) => {
     try {
       if (req.method === 'PATCH') {
         const body = await parseBody(req);
-        if (Object.prototype.hasOwnProperty.call(body, 'title')) {
-          return sendJSON(res, 200, app.updateTitle(id, body.title));
+        const hasTitle = Object.prototype.hasOwnProperty.call(body, 'title');
+        const hasCompleted = Object.prototype.hasOwnProperty.call(body, 'completed');
+        if (hasCompleted) {
+          if (typeof body.completed !== 'boolean') throw new Error('completed must be boolean');
+        }
+        let todo;
+        if (hasTitle) {
+          todo = app.updateTitle(id, body.title);
+        }
+        if (hasCompleted) {
+          return sendJSON(res, 200, app.setCompleted(id, body.completed));
+        }
+        if (hasTitle) {
+          return sendJSON(res, 200, todo);
         }
         return sendJSON(res, 200, app.complete(id));
       }
@@ -72,7 +88,7 @@ const server = http.createServer(async (req, res) => {
         return sendJSON(res, 200, app.remove(id));
       }
     } catch (e) {
-      const status = isTitleValidationError(e) ? 400 : 404;
+      const status = isTitleValidationError(e) || isCompletedValidationError(e) ? 400 : 404;
       return sendJSON(res, status, { error: e.message });
     }
   }
