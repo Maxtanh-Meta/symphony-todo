@@ -18,8 +18,6 @@
       --primary: #4f46e5;
       --primary-hover: #4338ca;
       --danger: #ef4444;
-      --completed-label-bg: #dcfce7;
-      --completed-label-text: #166534;
       --control-bg: #ffffff;
       --toggle-track: #d1d5db;
       --toggle-knob: #ffffff;
@@ -36,8 +34,6 @@
       --primary: #818cf8;
       --primary-hover: #6366f1;
       --danger: #f87171;
-      --completed-label-bg: #14532d;
-      --completed-label-text: #bbf7d0;
       --control-bg: #111827;
       --toggle-track: #4b5563;
       --toggle-knob: #f9fafb;
@@ -78,7 +74,6 @@
     .todo-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
     .todo-title { font-size: 1rem; overflow-wrap: anywhere; }
     .todo-item.completed .todo-title { text-decoration: line-through; color: var(--subtle); }
-    .completed-label { border-radius: 999px; padding: 2px 8px; background: var(--completed-label-bg); color: var(--completed-label-text); font-size: 0.72rem; font-weight: 700; line-height: 1.3; }
     .due-date { color: var(--muted); font-size: 0.85rem; }
     .todo-item.completed .due-date { color: var(--subtle); }
     .tag-list { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -271,10 +266,6 @@
       return `<div class="tag-list">${tags.map(tag => `<span class="tag">${escapeHTML(tag)}</span>`).join('')}</div>`;
     }
 
-    function renderCompletedLabel(completed) {
-      return completed ? '<span class="completed-label">Completed</span>' : '';
-    }
-
     function renderTodo(todo) {
       if (editingTodoId === todo.id) {
         return `
@@ -297,7 +288,6 @@
           <div class="todo-content">
             <div class="todo-title-row">
               <span class="todo-title">${escapeHTML(todo.title)}</span>
-              ${renderCompletedLabel(todo.completed)}
             </div>
             ${renderTags(todo.tags)}
             ${renderDueDate(todo.dueDate)}
