@@ -47,10 +47,10 @@ const server = http.createServer(async (req, res) => {
       }));
     }
     if (req.method === 'POST') {
-      const { title, dueDate, priority, tags } = await parseBody(req);
+      const { title, dueDate, tags } = await parseBody(req);
       if (!title) return sendJSON(res, 400, { error: 'title is required' });
       try {
-        return sendJSON(res, 201, app.add(title, dueDate, priority, tags));
+        return sendJSON(res, 201, app.add(title, dueDate, tags));
       } catch (e) {
         return sendJSON(res, 400, { error: e.message });
       }
