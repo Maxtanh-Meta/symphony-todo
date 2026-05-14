@@ -1,70 +1,83 @@
 name: Sync Project Board → Labels
 
 on:
-  projects_v2_item:
-    types: [edited]
+  schedule:
+    - cron: '*/5 * * * *'  # Every 5 minutes
+  workflow_dispatch:        # Manual trigger
 
 jobs:
   sync-labels:
     runs-on: ubuntu-latest
     steps:
-      - name: Add symphony:ready label when moved to Ready
+      - name: Sync project status to labels
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const item = context.payload.projects_v2_item;
-            const changes = context.payload.changes;
-            
-            // Only care about status field changes
-            if (!changes?.field_value?.field_name || 
-                changes.field_value.field_name !== 'Status') {
-              return;
-            }
-            
-            const newStatus = changes.field_value.to?.name;
-            const contentType = item.content_type;
-            
-            // Only handle issues (not PRs)
-            if (contentType !== 'Issue') return;
-            
-            const nodeId = item.content_node_id;
-            
-            // Get the issue number from the node ID
-            const query = `query($id: ID!) {
-              node(id: $id) {
-                ... on Issue {
-                  number
-                  repository { name owner { login } }
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const projectNumber = 1;
+
+            // Get project items with their status
+            const query = `query($owner: String!, $number: Int!) {
+              user(login: $owner) {
+                projectV2(number: $number) {
+                  items(first: 100) {
+                    nodes {
+                      fieldValueByName(name: "Status") {
+                        ... on ProjectV2ItemFieldSingleSelectValue {
+                          name
+                        }
+                      }
+                      content {
+                        ... on Issue {
+                          number
+                          labels(first: 10) {
+                            nodes { name }
+                          }
+                          repository { name }
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }`;
-            const result = await github.graphql(query, { id: nodeId });
-            const issue = result.node;
-            if (!issue) return;
-            
-            const owner = issue.repository.owner.login;
-            const repo = issue.repository.name;
-            const issueNumber = issue.number;
-            
-            if (newStatus === 'Ready') {
-              // Add symphony:ready label
-              await github.rest.issues.addLabels({
-                owner, repo,
-                issue_number: issueNumber,
-                labels: ['symphony:ready']
-              });
-              console.log(`Added symphony:ready to #${issueNumber}`);
-            } else if (newStatus === 'Backlog') {
-              // Remove symphony:ready label if moving back to Backlog
-              try {
-                await github.rest.issues.removeLabel({
+
+            const result = await github.graphql(query, { 
+              owner: owner, 
+              number: projectNumber 
+            });
+
+            const items = result.user.projectV2.items.nodes;
+
+            for (const item of items) {
+              const content = item.content;
+              if (!content || !content.number) continue;
+              if (content.repository?.name !== repo) continue;
+
+              const status = item.fieldValueByName?.name;
+              const labels = content.labels.nodes.map(l => l.name);
+              const hasReadyLabel = labels.includes('symphony:ready');
+              const issueNumber = content.number;
+
+              if (status === 'Ready' && !hasReadyLabel) {
+                await github.rest.issues.addLabels({
                   owner, repo,
                   issue_number: issueNumber,
-                  name: 'symphony:ready'
+                  labels: ['symphony:ready']
                 });
-                console.log(`Removed symphony:ready from #${issueNumber}`);
-              } catch (e) {
-                // Label might not exist, that's fine
+                console.log(`Added symphony:ready to #${issueNumber}`);
+              } else if (status !== 'Ready' && hasReadyLabel) {
+                try {
+                  await github.rest.issues.removeLabel({
+                    owner, repo,
+                    issue_number: issueNumber,
+                    name: 'symphony:ready'
+                  });
+                  console.log(`Removed symphony:ready from #${issueNumber}`);
+                } catch (e) {
+                  // Label might not exist
+                }
               }
             }
