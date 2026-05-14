@@ -1,0 +1,70 @@
+name: Sync Project Board → Labels
+
+on:
+  projects_v2_item:
+    types: [edited]
+
+jobs:
+  sync-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add symphony:ready label when moved to Ready
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const item = context.payload.projects_v2_item;
+            const changes = context.payload.changes;
+            
+            // Only care about status field changes
+            if (!changes?.field_value?.field_name || 
+                changes.field_value.field_name !== 'Status') {
+              return;
+            }
+            
+            const newStatus = changes.field_value.to?.name;
+            const contentType = item.content_type;
+            
+            // Only handle issues (not PRs)
+            if (contentType !== 'Issue') return;
+            
+            const nodeId = item.content_node_id;
+            
+            // Get the issue number from the node ID
+            const query = `query($id: ID!) {
+              node(id: $id) {
+                ... on Issue {
+                  number
+                  repository { name owner { login } }
+                }
+              }
+            }`;
+            const result = await github.graphql(query, { id: nodeId });
+            const issue = result.node;
+            if (!issue) return;
+            
+            const owner = issue.repository.owner.login;
+            const repo = issue.repository.name;
+            const issueNumber = issue.number;
+            
+            if (newStatus === 'Ready') {
+              // Add symphony:ready label
+              await github.rest.issues.addLabels({
+                owner, repo,
+                issue_number: issueNumber,
+                labels: ['symphony:ready']
+              });
+              console.log(`Added symphony:ready to #${issueNumber}`);
+            } else if (newStatus === 'Backlog') {
+              // Remove symphony:ready label if moving back to Backlog
+              try {
+                await github.rest.issues.removeLabel({
+                  owner, repo,
+                  issue_number: issueNumber,
+                  name: 'symphony:ready'
+                });
+                console.log(`Removed symphony:ready from #${issueNumber}`);
+              } catch (e) {
+                // Label might not exist, that's fine
+              }
+            }
