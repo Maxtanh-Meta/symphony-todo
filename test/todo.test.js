@@ -13,8 +13,8 @@ function assert(condition, msg) {
 
 console.log('TodoApp Tests\n');
 
-assert(indexHtml.includes('--completed-label-bg: #dcfce7;'), 'completed label uses a light green background');
-assert(indexHtml.includes("return completed ? '<span class=\"completed-label\">Completed</span>' : '';"), 'completed label renders only for completed todos');
+assert(!indexHtml.includes('completed-label'), 'frontend does not include completed label styles or markup');
+assert(!indexHtml.includes('renderCompletedLabel'), 'frontend does not include completed label render helper');
 
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'todo-test-'));
 const storagePath = path.join(tempDir, 'todos.json');
