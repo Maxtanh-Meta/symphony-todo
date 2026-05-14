@@ -1,24 +1,102 @@
 name: Sync Project Board → Labels
 
 on:
+  projects_v2_item:
+    types: [edited]
   schedule:
-    - cron: '*/5 * * * *'  # Every 5 minutes
-  workflow_dispatch:        # Manual trigger
+    - cron: '*/5 * * * *'  # Fallback poll every 5 minutes
+  workflow_dispatch:
 
 jobs:
+  # Near-instant: fires when a card moves columns
+  on-card-move:
+    if: github.event_name == 'projects_v2_item'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Label issue on status change
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECT_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const projectNumber = 1;
+            const itemNodeId = context.payload.projects_v2_item.node_id;
+
+            // Query the item's current status and linked issue
+            const query = `query($itemId: ID!) {
+              node(id: $itemId) {
+                ... on ProjectV2Item {
+                  fieldValueByName(name: "Status") {
+                    ... on ProjectV2ItemFieldSingleSelectValue {
+                      name
+                    }
+                  }
+                  content {
+                    ... on Issue {
+                      number
+                      labels(first: 10) {
+                        nodes { name }
+                      }
+                      repository { name owner { login } }
+                    }
+                  }
+                }
+              }
+            }`;
+
+            const result = await github.graphql(query, { itemId: itemNodeId });
+            const item = result.node;
+            const content = item.content;
+
+            if (!content || !content.number) {
+              console.log('Not an issue, skipping');
+              return;
+            }
+            if (content.repository?.name !== repo) {
+              console.log(`Issue is in ${content.repository?.name}, not ${repo}. Skipping.`);
+              return;
+            }
+
+            const status = item.fieldValueByName?.name;
+            const labels = content.labels.nodes.map(l => l.name);
+            const hasReadyLabel = labels.includes('symphony:ready');
+            const issueNumber = content.number;
+
+            console.log(`Issue #${issueNumber}: status="${status}", hasReadyLabel=${hasReadyLabel}`);
+
+            if (status === 'Ready' && !hasReadyLabel) {
+              await github.rest.issues.addLabels({
+                owner, repo,
+                issue_number: issueNumber,
+                labels: ['symphony:ready']
+              });
+              console.log(`✅ Added symphony:ready to #${issueNumber}`);
+            } else if (status !== 'Ready' && hasReadyLabel) {
+              try {
+                await github.rest.issues.removeLabel({
+                  owner, repo,
+                  issue_number: issueNumber,
+                  name: 'symphony:ready'
+                });
+                console.log(`🗑️ Removed symphony:ready from #${issueNumber}`);
+              } catch (e) {}
+            }
+
+  # Fallback: catches anything the event missed
   sync-labels:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Sync project status to labels
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PROJECT_TOKEN }}
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const projectNumber = 1;
 
-            // Get project items with their status
             const query = `query($owner: String!, $number: Int!) {
               user(login: $owner) {
                 projectV2(number: $number) {
@@ -76,8 +154,6 @@ jobs:
                     name: 'symphony:ready'
                   });
                   console.log(`Removed symphony:ready from #${issueNumber}`);
-                } catch (e) {
-                  // Label might not exist
-                }
+                } catch (e) {}
               }
             }
