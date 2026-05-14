@@ -141,63 +141,6 @@ assert(filterApp.list({ status: 'completed' }).map(todo => todo.title).join(',')
 assert(filterApp.list({ search: 'search' }).map(todo => todo.title).join(',') === 'Review Search UI', 'list searches title case-insensitively');
 assert(filterApp.list({ status: 'active', search: 're' }).map(todo => todo.priority).join(',') === 'medium,low', 'list combines filters and preserves priority sort');
 
-// Undo/redo
-const undoAddApp = new TodoApp(path.join(tempDir, 'undo-add-todos.json'));
-const undoAdded = undoAddApp.add('Undo add');
-undoAddApp.undo();
-assert(undoAddApp.list().length === 0, 'undo reverts add');
-undoAddApp.redo();
-assert(undoAddApp.list().length === 1 && undoAddApp.list()[0].id === undoAdded.id, 'redo reapplies add with same id');
-
-const undoCompleteApp = new TodoApp(path.join(tempDir, 'undo-complete-todos.json'));
-const undoCompleteTodo = undoCompleteApp.add('Undo complete');
-undoCompleteApp.complete(undoCompleteTodo.id);
-undoCompleteApp.undo();
-assert(undoCompleteApp.list()[0].completed === false, 'undo reverts complete');
-undoCompleteApp.redo();
-assert(undoCompleteApp.list()[0].completed === true, 'redo reapplies complete');
-
-const undoRemoveApp = new TodoApp(path.join(tempDir, 'undo-remove-todos.json'));
-const removeFirst = undoRemoveApp.add('First');
-const removeSecond = undoRemoveApp.add('Second');
-const removeThird = undoRemoveApp.add('Third');
-undoRemoveApp.remove(removeSecond.id);
-undoRemoveApp.undo();
-assert(undoRemoveApp.list().map(todo => todo.title).join(',') === 'First,Second,Third', 'undo restores removed todo at original index');
-undoRemoveApp.redo();
-assert(undoRemoveApp.list().map(todo => todo.title).join(',') === 'First,Third', 'redo reapplies remove');
-assert(removeFirst.id === 1 && removeThird.id === 3, 'remove undo test preserves surrounding ids');
-
-const undoEditApp = new TodoApp(path.join(tempDir, 'undo-edit-todos.json'));
-const editTodo = undoEditApp.add('Original title');
-undoEditApp.updateTitle(editTodo.id, 'Updated title');
-undoEditApp.undo();
-assert(undoEditApp.list()[0].title === 'Original title', 'undo reverts title edit');
-undoEditApp.redo();
-assert(undoEditApp.list()[0].title === 'Updated title', 'redo reapplies title edit');
-
-const redoClearApp = new TodoApp(path.join(tempDir, 'redo-clear-todos.json'));
-redoClearApp.add('First action');
-redoClearApp.add('Second action');
-redoClearApp.undo();
-redoClearApp.add('Third action');
-try { redoClearApp.redo(); assert(false, 'new action after undo clears redo history'); }
-catch (e) { assert(e.message === 'Nothing to redo', 'new action after undo clears redo history'); }
-assert(redoClearApp.list().map(todo => todo.title).join(',') === 'First action,Third action', 'new action after undo leaves expected todos');
-
-const historyLimitApp = new TodoApp(path.join(tempDir, 'history-limit-todos.json'));
-for (let i = 1; i <= 6; i++) historyLimitApp.add(`Todo ${i}`);
-for (let i = 0; i < 5; i++) historyLimitApp.undo();
-assert(historyLimitApp.list().map(todo => todo.title).join(',') === 'Todo 1', 'undo history retains only last 5 actions');
-try { historyLimitApp.undo(); assert(false, 'undo throws when history is empty'); }
-catch (e) { assert(e.message === 'Nothing to undo', 'undo throws when history is empty'); }
-
-const emptyHistoryApp = new TodoApp(path.join(tempDir, 'empty-history-todos.json'));
-try { emptyHistoryApp.undo(); assert(false, 'empty undo throws'); }
-catch (e) { assert(e.message === 'Nothing to undo', 'empty undo throws'); }
-try { emptyHistoryApp.redo(); assert(false, 'empty redo throws'); }
-catch (e) { assert(e.message === 'Nothing to redo', 'empty redo throws'); }
-
 fs.rmSync(tempDir, { recursive: true, force: true });
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -38,24 +38,6 @@ const server = http.createServer(async (req, res) => {
   }
 
   // API routes
-  if (url.pathname === '/api/undo' && req.method === 'POST') {
-    try {
-      const action = app.undo();
-      return sendJSON(res, 200, { action: action.type });
-    } catch (e) {
-      return sendJSON(res, 400, { error: e.message });
-    }
-  }
-
-  if (url.pathname === '/api/redo' && req.method === 'POST') {
-    try {
-      const action = app.redo();
-      return sendJSON(res, 200, { action: action.type });
-    } catch (e) {
-      return sendJSON(res, 400, { error: e.message });
-    }
-  }
-
   if (url.pathname === '/api/todos') {
     if (req.method === 'GET') {
       return sendJSON(res, 200, app.list({

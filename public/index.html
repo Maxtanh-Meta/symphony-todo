@@ -43,8 +43,6 @@
     .header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
     h1 { font-size: 2rem; color: var(--text); }
     .header-controls { display: flex; align-items: center; gap: 8px; }
-    .history-button { padding: 8px 10px; background: var(--surface); color: var(--muted); border: 2px solid var(--border); font-size: 0.9rem; }
-    .history-button:hover { background: var(--primary); border-color: var(--primary); color: white; }
     .theme-toggle { display: inline-flex; align-items: center; gap: 10px; color: var(--muted); font-size: 0.9rem; cursor: pointer; user-select: none; }
     .theme-toggle input { position: absolute; opacity: 0; pointer-events: none; }
     .theme-switch { width: 46px; height: 26px; padding: 3px; border-radius: 999px; background: var(--toggle-track); transition: background 0.2s; }
@@ -99,8 +97,6 @@
     .todo-item .delete { background: none; border: none; color: var(--subtle); font-size: 1.2rem; cursor: pointer; padding: 4px 8px; }
     .todo-item .delete:hover { color: var(--danger); background: transparent; }
     .empty { text-align: center; color: var(--subtle); padding: 40px; }
-    .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(12px); padding: 10px 14px; border-radius: 8px; background: var(--text); color: var(--surface); box-shadow: 0 6px 18px var(--shadow); opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; }
-    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     @media (max-width: 420px) {
       .header { align-items: flex-start; flex-direction: column; }
       .header-controls { align-self: stretch; justify-content: space-between; }
@@ -119,8 +115,6 @@
     <div class="header">
       <h1>📝 Todos</h1>
       <div class="header-controls">
-        <button class="history-button" onclick="performHistoryAction('undo')">Undo</button>
-        <button class="history-button" onclick="performHistoryAction('redo')">Redo</button>
         <label class="theme-toggle" for="themeToggle">
           <span>Dark mode</span>
           <input type="checkbox" id="themeToggle">
@@ -152,7 +146,6 @@
     </div>
     <ul class="todo-list" id="list"></ul>
   </div>
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script>
     const MAX_TITLE_LENGTH = 140;
     const TITLE_WARNING_LENGTH = 120;
@@ -164,10 +157,8 @@
     const searchInput = document.getElementById('search');
     const list = document.getElementById('list');
     const themeToggle = document.getElementById('themeToggle');
-    const toast = document.getElementById('toast');
     let statusFilter = 'all';
     let editingTodoId = null;
-    let toastTimer = null;
 
     themeToggle.checked = document.documentElement.dataset.theme === 'dark';
     themeToggle.addEventListener('change', () => {
@@ -179,7 +170,6 @@
     input.addEventListener('keydown', e => { if (e.key === 'Enter') addTodo(); });
     input.addEventListener('input', () => updateTitleCounter(input, titleCounter));
     searchInput.addEventListener('input', loadTodos);
-    document.addEventListener('keydown', handleHistoryShortcut);
 
     function updateTitleCounter(inputElement, counterElement) {
       if (!counterElement) return;
@@ -213,35 +203,6 @@
       priorityInput.value = 'medium';
       tagsInput.value = '';
       loadTodos();
-    }
-
-    function showToast(message) {
-      toast.textContent = message;
-      toast.classList.add('show');
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => toast.classList.remove('show'), 1600);
-    }
-
-    async function performHistoryAction(action) {
-      const response = await fetch(`/api/${action}`, { method: 'POST' });
-      const result = await response.json();
-      if (!response.ok) {
-        showToast(result.error || `Nothing to ${action}`);
-        return;
-      }
-
-      editingTodoId = null;
-      await loadTodos();
-      showToast(action === 'undo' ? 'Undo performed' : 'Redo performed');
-    }
-
-    function handleHistoryShortcut(event) {
-      const target = event.target;
-      const isTyping = target.matches('input, textarea, select') || target.isContentEditable;
-      if (isTyping || event.key.toLowerCase() !== 'z' || (!event.ctrlKey && !event.metaKey)) return;
-
-      event.preventDefault();
-      performHistoryAction(event.shiftKey ? 'redo' : 'undo');
     }
 
     async function completeTodo(id) {
