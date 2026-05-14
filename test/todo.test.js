@@ -86,9 +86,10 @@ catch (e) { assert(true, 'add rejects invalid due date'); }
 // Persistence
 const restored = new TodoApp(storagePath);
 assert(restored.list().length === 2, 'constructor restores saved todos');
-assert(restored.list()[0].completed === true, 'constructor restores completed status');
-assert(restored.list()[1].title === 'Pay mortgage', 'constructor restores updated title');
-assert(restored.list()[1].dueDate === '2026-05-15', 'constructor restores due date');
+assert(restored.list()[0].title === 'Pay mortgage', 'list returns uncompleted todos before completed todos');
+assert(restored.list().find(todo => todo.id === 1).completed === true, 'constructor restores completed status');
+assert(restored.list().find(todo => todo.id === 2).title === 'Pay mortgage', 'constructor restores updated title');
+assert(restored.list().find(todo => todo.id === 2).dueDate === '2026-05-15', 'constructor restores due date');
 assert(restored.add('Read book').id === 4, 'constructor restores next id');
 
 const oldPriorityStoragePath = path.join(tempDir, 'old-priority-todos.json');
@@ -128,10 +129,12 @@ const tagFilterStoragePath = path.join(tempDir, 'tag-filter-todos.json');
 const tagFilterApp = new TodoApp(tagFilterStoragePath);
 tagFilterApp.add('First home task', null, 'Home');
 const completedUrgent = tagFilterApp.add('Work task', null, 'work,urgent');
+const completedHome = tagFilterApp.add('Finished home task', null, 'home,urgent');
 tagFilterApp.add('Second home task', null, 'home,review');
 tagFilterApp.complete(completedUrgent.id);
-assert(tagFilterApp.list({ tag: 'HOME' }).map(todo => todo.title).join(',') === 'First home task,Second home task', 'list filters tags case-insensitively in insertion order');
-assert(tagFilterApp.list({ status: 'completed', tag: 'urgent' }).map(todo => todo.title).join(',') === 'Work task', 'list combines status and tag filters');
+tagFilterApp.complete(completedHome.id);
+assert(tagFilterApp.list({ tag: 'HOME' }).map(todo => todo.title).join(',') === 'First home task,Second home task,Finished home task', 'list filters tags case-insensitively with uncompleted todos first');
+assert(tagFilterApp.list({ status: 'completed', tag: 'urgent' }).map(todo => todo.title).join(',') === 'Work task,Finished home task', 'list combines status and tag filters in insertion order');
 assert(tagFilterApp.list({ search: 'second', tag: 'review' }).map(todo => todo.title).join(',') === 'Second home task', 'list combines search and tag filters');
 
 // Filters
@@ -142,6 +145,7 @@ const completedBug = filterApp.add('Fix login bug');
 filterApp.add('Review Search UI');
 filterApp.complete(completedBug.id);
 
+assert(filterApp.list().map(todo => todo.title).join(',') === 'Write release notes,Review Search UI,Fix login bug', 'list returns active todos before completed todos');
 assert(filterApp.list({ status: 'active' }).map(todo => todo.title).join(',') === 'Write release notes,Review Search UI', 'list filters active todos in insertion order');
 assert(filterApp.list({ status: 'completed' }).map(todo => todo.title).join(',') === 'Fix login bug', 'list filters completed todos');
 assert(filterApp.list({ search: 'search' }).map(todo => todo.title).join(',') === 'Review Search UI', 'list searches title case-insensitively');

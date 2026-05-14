@@ -112,7 +112,7 @@ class TodoApp {
       if (search && !todo.title.toLowerCase().includes(search)) return false;
       if (tag && !todo.tags.some(todoTag => todoTag.toLowerCase() === tag)) return false;
       return true;
-    });
+    }).sort((a, b) => Number(a.completed) - Number(b.completed));
   }
 
   complete(id) {
