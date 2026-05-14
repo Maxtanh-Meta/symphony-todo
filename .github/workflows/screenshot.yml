@@ -34,6 +34,8 @@ jobs:
           const puppeteer = require('puppeteer');
           const path = require('path');
 
+          const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
           async function takeScreenshots(url, prefix) {
             const browser = await puppeteer.launch({
               headless: 'new',
@@ -50,8 +52,8 @@ jobs:
             const todos = ['Buy groceries', 'Review PR #42', 'Ship the feature'];
             for (const todo of todos) {
               await page.type('#input', todo);
-              await page.click('button');
-              await page.waitForTimeout(300);
+              await page.click('button[onclick="addTodo()"]');
+              await delay(500);
             }
 
             // Screenshot: with todos
@@ -60,7 +62,7 @@ jobs:
             // Complete one
             const checks = await page.$$('.check');
             if (checks.length > 0) await checks[0].click();
-            await page.waitForTimeout(300);
+            await delay(500);
 
             // Screenshot: with completed
             await page.screenshot({ path: `${prefix}-completed.png`, fullPage: true });
