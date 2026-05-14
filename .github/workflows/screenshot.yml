@@ -1,0 +1,135 @@
+name: Visual Preview
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  screenshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: pr-branch
+
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base-branch
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Puppeteer
+        run: npm install puppeteer
+
+      - name: Create screenshot script
+        run: |
+          cat > screenshot.js << 'SCRIPT'
+          const puppeteer = require('puppeteer');
+          const path = require('path');
+
+          async function takeScreenshots(url, prefix) {
+            const browser = await puppeteer.launch({
+              headless: 'new',
+              args: ['--no-sandbox', '--disable-setuid-sandbox']
+            });
+            const page = await browser.newPage();
+            await page.setViewport({ width: 1280, height: 800 });
+            await page.goto(url, { waitUntil: 'networkidle0' });
+
+            // Screenshot: empty state
+            await page.screenshot({ path: `${prefix}-empty.png`, fullPage: true });
+
+            // Add some sample todos
+            const todos = ['Buy groceries', 'Review PR #42', 'Ship the feature'];
+            for (const todo of todos) {
+              await page.type('#input', todo);
+              await page.click('button');
+              await page.waitForTimeout(300);
+            }
+
+            // Screenshot: with todos
+            await page.screenshot({ path: `${prefix}-with-todos.png`, fullPage: true });
+
+            // Complete one
+            const checks = await page.$$('.check');
+            if (checks.length > 0) await checks[0].click();
+            await page.waitForTimeout(300);
+
+            // Screenshot: with completed
+            await page.screenshot({ path: `${prefix}-completed.png`, fullPage: true });
+
+            await browser.close();
+          }
+
+          async function main() {
+            const [,, url, prefix] = process.argv;
+            await takeScreenshots(url, prefix);
+          }
+
+          main().catch(e => { console.error(e); process.exit(1); });
+          SCRIPT
+
+      - name: Screenshot base branch (before)
+        run: |
+          cd base-branch && node src/server.js &
+          sleep 2
+          node screenshot.js http://localhost:3000 before
+          kill %1 2>/dev/null || true
+          sleep 1
+
+      - name: Screenshot PR branch (after)
+        run: |
+          cd pr-branch && PORT=3001 node src/server.js &
+          sleep 2
+          node screenshot.js http://localhost:3001 after
+          kill %1 2>/dev/null || true
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-preview
+          path: |
+            before-*.png
+            after-*.png
+
+      - name: Post comparison to PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const { owner, repo } = context.repo;
+            const prNumber = context.payload.pull_request.number;
+
+            // Upload images as assets via the artifact URL
+            const runId = context.runId;
+            const artifactUrl = `https://github.com/${owner}/${repo}/actions/runs/${runId}`;
+
+            const body = `## 📸 Visual Preview
+
+            | | Before (master) | After (this PR) |
+            |---|---|---|
+            | Empty state | ![before-empty](https://github.com/${owner}/${repo}/actions/runs/${runId}/artifacts) | ![after-empty](https://github.com/${owner}/${repo}/actions/runs/${runId}/artifacts) |
+
+            > Screenshots uploaded as [workflow artifacts](${artifactUrl}). Download to compare.
+
+            <details>
+            <summary>How to view</summary>
+
+            1. Click the artifacts link above
+            2. Download \`visual-preview\` artifact
+            3. Compare \`before-*.png\` vs \`after-*.png\`
+
+            </details>`;
+
+            await github.rest.issues.createComment({
+              owner, repo,
+              issue_number: prNumber,
+              body: body.replace(/            /g, '')
+            });
