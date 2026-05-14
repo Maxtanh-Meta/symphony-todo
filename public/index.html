@@ -18,8 +18,6 @@
       --primary: #4f46e5;
       --primary-hover: #4338ca;
       --danger: #ef4444;
-      --completed-label-bg: #dcfce7;
-      --completed-label-text: #166534;
       --control-bg: #ffffff;
       --toggle-track: #d1d5db;
       --toggle-knob: #ffffff;
@@ -36,8 +34,6 @@
       --primary: #818cf8;
       --primary-hover: #6366f1;
       --danger: #f87171;
-      --completed-label-bg: #14532d;
-      --completed-label-text: #bbf7d0;
       --control-bg: #111827;
       --toggle-track: #4b5563;
       --toggle-knob: #f9fafb;
@@ -75,10 +71,8 @@
     .todo-list { list-style: none; }
     .todo-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--surface); border-radius: 8px; margin-bottom: 8px; box-shadow: 0 1px 3px var(--shadow); transition: background 0.2s, box-shadow 0.2s; }
     .todo-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-    .todo-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
     .todo-title { font-size: 1rem; overflow-wrap: anywhere; }
     .todo-item.completed .todo-title { text-decoration: line-through; color: var(--subtle); }
-    .completed-label { border-radius: 999px; padding: 2px 8px; background: var(--completed-label-bg); color: var(--completed-label-text); font-size: 0.72rem; font-weight: 700; line-height: 1.3; }
     .due-date { color: var(--muted); font-size: 0.85rem; }
     .todo-item.completed .due-date { color: var(--subtle); }
     .tag-list { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -271,10 +265,6 @@
       return `<div class="tag-list">${tags.map(tag => `<span class="tag">${escapeHTML(tag)}</span>`).join('')}</div>`;
     }
 
-    function renderCompletedLabel(completed) {
-      return completed ? '<span class="completed-label">Completed</span>' : '';
-    }
-
     function renderTodo(todo) {
       if (editingTodoId === todo.id) {
         return `
@@ -295,10 +285,7 @@
         <li class="todo-item ${todo.completed ? 'completed' : ''}">
           <button class="check" type="button" aria-pressed="${todo.completed ? 'true' : 'false'}" aria-label="${todo.completed ? 'Mark active' : 'Mark completed'}" onclick="toggleTodo(${todo.id}, ${todo.completed ? 'false' : 'true'})"></button>
           <div class="todo-content">
-            <div class="todo-title-row">
-              <span class="todo-title">${escapeHTML(todo.title)}</span>
-              ${renderCompletedLabel(todo.completed)}
-            </div>
+            <span class="todo-title">${escapeHTML(todo.title)}</span>
             ${renderTags(todo.tags)}
             ${renderDueDate(todo.dueDate)}
           </div>
