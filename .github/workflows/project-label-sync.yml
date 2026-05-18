@@ -2,7 +2,7 @@ name: Sync Project Board → Labels
 
 on:
   schedule:
-    - cron: '* * * * *'  # Every minute
+    - cron: '*/5 * * * *'  # Every 5 minutes
   workflow_dispatch:
 
 jobs:
@@ -14,12 +14,13 @@ jobs:
         with:
           github-token: ${{ secrets.PROJECT_TOKEN }}
           script: |
-            const owner = context.repo.owner;
+            const org = 'XF-APAC';
             const repo = context.repo.repo;
-            const projectNumber = 1;
+            const repoOwner = context.repo.owner;
+            const projectNumber = 3;
 
-            const query = `query($owner: String!, $number: Int!) {
-              user(login: $owner) {
+            const query = `query($org: String!, $number: Int!) {
+              organization(login: $org) {
                 projectV2(number: $number) {
                   items(first: 100) {
                     nodes {
@@ -34,7 +35,10 @@ jobs:
                           labels(first: 10) {
                             nodes { name }
                           }
-                          repository { name }
+                          repository {
+                            name
+                            owner { login }
+                          }
                         }
                       }
                     }
@@ -44,16 +48,17 @@ jobs:
             }`;
 
             const result = await github.graphql(query, { 
-              owner: owner, 
+              org: org, 
               number: projectNumber 
             });
 
-            const items = result.user.projectV2.items.nodes;
+            const items = result.organization.projectV2.items.nodes;
 
             for (const item of items) {
               const content = item.content;
               if (!content || !content.number) continue;
               if (content.repository?.name !== repo) continue;
+              if (content.repository?.owner?.login !== repoOwner) continue;
 
               const status = item.fieldValueByName?.name;
               const labels = content.labels.nodes.map(l => l.name);
@@ -62,7 +67,8 @@ jobs:
 
               if (status === 'Ready' && !hasReadyLabel) {
                 await github.rest.issues.addLabels({
-                  owner, repo,
+                  owner: repoOwner,
+                  repo,
                   issue_number: issueNumber,
                   labels: ['symphony:ready']
                 });
@@ -70,7 +76,8 @@ jobs:
               } else if (status !== 'Ready' && hasReadyLabel) {
                 try {
                   await github.rest.issues.removeLabel({
-                    owner, repo,
+                    owner: repoOwner,
+                    repo,
                     issue_number: issueNumber,
                     name: 'symphony:ready'
                   });
